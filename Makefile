@@ -1,2 +1,2 @@
-main: main.cpp
-	g++ -o main main.cpp
+main: main.cpp gemm.cpp
+	g++ -o main main.cpp gemm.cpp
