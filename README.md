@@ -1,5 +1,5 @@
 # LogisticRegression-cpp
-Logistic Regression from scrach with Breast cancer dataset.
+Logistic Regression from scratch with Breast cancer dataset.
 ## How to run
 ```
 make
@@ -10,4 +10,5 @@ Test error rate: 7.89%
 
 ## Reference
 [1] https://github.com/marvinlanhenke/DataScience/blob/main/MachineLearningFromScratch/LogisticRegression/LogisticRegression.py
+
 [2] https://github.com/pjreddie/darknet
