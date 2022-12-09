@@ -85,12 +85,32 @@ class BreastCancerDataset {
                 else {
                     ground_truth.push_back(1);
                 }
+                datasetSize++;
             }
             assert(features.size() == ground_truth.size());
+            trainSize = datasetSize * train_test_split;
+            testSize = datasetSize - trainSize;
+            featureSize = features.front().size();
+        };
+
+        void getTrainData(unique_ptr<float[]> &X, unique_ptr<float[]> &y) {
+            X = make_unique<float[]>(trainSize*featureSize);
+            y = make_unique<float[]>(trainSize);
+            for (int i = 0; i < trainSize; i++){
+                vector<float> feature = features[i];
+                for(int j = 0; j < featureSize; j++){
+                    X[i*featureSize + j] = feature[j];
+                }
+                y[i] = ground_truth[i];
+            }
         };
     
     private:
-        float train_test_split = 0.2;
+        float train_test_split = 0.8;
+        int trainSize = 0;
+        int testSize = 0;
+        int featureSize = 0;
+        size_t datasetSize = 0;
         vector<vector<float>> features;
         vector<float> ground_truth;
 };
@@ -101,9 +121,16 @@ int main(int argc, char** argv){
     1. Add breast cancer dataset (DONE)
     2. Add logistic regression class
     3. Implement matrix multiplication
-    4. add shuffle to dataset
+    4. Add shuffle to dataset
     */
     BreastCancerDataset  dataset;
+    unique_ptr<float[]> X_train;
+    unique_ptr<float[]> y_train;
+    dataset.getTrainData(X_train, y_train);
+    // test again data available
+    for(int i =0; i < 200; i++) {
+        LOG(y_train[i]);
+    }
 
     return 0;
 }
