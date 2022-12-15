@@ -22,10 +22,108 @@ float rand_uniform(float min, float max) {
     return ((float)rand()/RAND_MAX * (max - min)) + min;
 }
 
-class LogisticRegression {
+class HousePriceDataset {
     public:
-        LogisticRegression(int input_feats): input_features{input_feats} {};
-        LogisticRegression(int input_feats, float learning_rate, int n_iters): 
+        HousePriceDataset() {
+            string filePath = "house_price_data.txt";
+            ifstream file(filePath);
+
+            if(!file.is_open()){
+                LOG("Cannot open dataset file");
+            }
+
+            string line = "";
+            string value = "";
+            string price = "";
+            while(getline(file, line)) {
+                stringstream ss{line};
+                vector<float> feature;
+                for (int i = 0; i < 2; i++) {
+                    getline(ss, value, ',');
+                    feature.push_back(stof(value));
+                }
+                features.push_back(feature);
+                getline(ss, price, ',');
+                ground_truth.push_back(stof(price));
+                datasetSize++;
+            }
+            assert(features.size() == ground_truth.size());
+            trainSize = datasetSize * train_test_split;
+            testSize = datasetSize - trainSize;
+            featureSize = features.back().size();
+        }
+
+        int getTrainData(unique_ptr<float[]> &X, unique_ptr<float[]> &y) {
+            X = make_unique<float[]>(trainSize*featureSize);
+            y = make_unique<float[]>(trainSize);
+            mean = make_unique<float[]>(featureSize);
+            std = make_unique<float[]>(featureSize);
+            // mean 
+            for (int i = 0; i < trainSize; i++) {
+                vector<float> feat = features[i];
+                for (int j = 0; j < featureSize; j++) {
+                    mean[j] += feat[j];
+                }
+            }
+            for (int i = 0; i < featureSize; i++) {
+                mean[i] /= trainSize;
+                // LOG("mean: " << mean[i]);
+            }
+
+            // standard deviation
+            for (int i = 0; i < trainSize; i++) {
+                vector<float> feat = features[i];
+                for (int j = 0; j < featureSize; j++) {
+                    std[j] += pow(feat[j] - mean[j], 2);
+                }
+
+            }
+
+            for (int i = 0; i < featureSize; i++) {
+                std[i] = sqrt(std[i] / trainSize);
+                // LOG("std: " << std[i]);
+            }
+
+            // normalize data
+            for (int i = 0; i < trainSize; i++) {
+                vector<float> feat = features[i];
+                for (int j = 0; j < featureSize; j++) {
+                    X[i*featureSize + j] = (feat[j] - mean[j]) / std[j];
+                    // LOG(X[i*featureSize + j]);
+                }
+            }
+            for(int i =0; i < trainSize; i++) {
+                y[i] = ground_truth[i];
+                // LOG(y[i]);
+            }
+
+            return trainSize;
+        }
+
+        void preprocess(unique_ptr<float[]> &X, int samples){
+            for(int i = 0; i < samples; i++) {
+                for(int j = 0; j < featureSize; j++) {
+                    X[i*featureSize + j] = (X[i*featureSize + j] - mean[j]) / std[j];
+                }
+            }
+        }
+
+    private:
+        float train_test_split = 1.0f;
+        vector<vector<float>> features;
+        vector<float> ground_truth;
+        unique_ptr<float[]> mean;
+        unique_ptr<float[]> std;
+        int datasetSize = 0;
+        int trainSize = 0;
+        int testSize = 0;
+        int featureSize = 0;
+};
+
+class LinearRegression {
+    public:
+        LinearRegression(int input_feats): input_features{input_feats} {};
+        LinearRegression(int input_feats, float learning_rate, int n_iters): 
         lr{learning_rate}, n_iters{n_iters}, input_features{input_feats} {};
         
         void fit(unique_ptr<float[]>& X, unique_ptr<float[]>& y, int samples) {
@@ -39,23 +137,24 @@ class LogisticRegression {
         }
 
         unique_ptr<float[]> predict(unique_ptr<float[]>& X, int samples){
-            unique_ptr<float[]> out = getPrediction(X, samples);
-            unique_ptr<float[]> ret = make_unique<float[]>(samples);
-            float threshold = 0.5;
-            for(int i = 0; i < samples; i++){
-                ret[i] = out[i] > threshold ? 1 : 0;
-            }
-            return ret;
+            auto predict = getPrediction(X, samples);
+            return predict;
         }
 
-        float accuracy(unique_ptr<float[]> &y_gt, unique_ptr<float[]> &y_pred, int samples){
-            int error_count = 0;
-            for (int i = 0; i < samples; i++) {
-                if(y_gt[i] != y_pred[i]){
-                    error_count++;
-                }
+        float score(unique_ptr<float[]> &y_gt, unique_ptr<float[]> &y_pred, int samples){
+            float y_mean = 0.f;
+            for(int i = 0; i < samples; i++){
+                y_mean += y_gt[i];
             }
-            return error_count * 100.f / samples;
+            y_mean /= samples;
+                
+            float upper = 0.f;
+            float lower = 0.f;
+            for(int i = 0; i < samples; i++){
+                upper += pow(y_gt[i] - y_pred[i], 2);
+                lower += pow(y_gt[i] - y_mean, 2);
+            }
+            return 1 - upper/lower;
         }
 
     protected:
@@ -75,7 +174,7 @@ class LogisticRegression {
         unique_ptr<float[]> getPrediction(unique_ptr<float[]> &input, int samples) {
             // output = input * weight + bias;
             // input (samples x feats)   | a(m,k)
-            // weights (feats x 1)         | b(k,n)
+            // weights (feats x 1)       | b(k,n)
             // output (samples x 1)      | c(m,n)
             unique_ptr<float[]> output = make_unique<float[]>(samples);
             int m = samples;
@@ -89,7 +188,6 @@ class LogisticRegression {
             // add bias, sigmoid
             for(int i = 0; i < samples; i++) {
                 output[i] += bias;
-                output[i] = sigmoid(output[i]);
             }
 
             return output;
@@ -106,7 +204,7 @@ class LogisticRegression {
             // compute: dW = X.T * error
             // X (samples x feats) -> a (k, m)
             // error (samples x 1) -> b (k, n)
-            // dW (feats x 1)        -> c (m, n)
+            // dW (feats x 1)      -> c (m, n)
             int m = input_features;
             int k = samples;
             int n = 1;
@@ -115,11 +213,15 @@ class LogisticRegression {
             float * c = dW.get();
             gemm(1, 0, m, n, k, 1, a, m, b, n, 0, c, n);
 
+            // for (int i = 0; i < input_features; i++){
+            //     LOG("DW " << X[i]);
+            // }
             // compute dB = sum(error)
             dB = 0;
             for (int i = 0; i < samples; i++) {
                 dB += error[i] / samples;
             }
+            // LOG(dB);
         }
 
         void updateParams() {
@@ -145,115 +247,31 @@ class LogisticRegression {
         }
 };
 
-class BreastCancerDataset {
-    public:
-        BreastCancerDataset() {
-            string filePath = "wdbc.data";
-
-            ifstream file{filePath};
-
-            if(!file.is_open()){
-                LOG("Can not open dataset file");
-            }
-
-            string line = "";
-            string ID = "";
-            string label = "";
-            string value = "";
-            while(getline(file, line)){
-                stringstream ss(line);
-                getline(ss, ID, ',');
-                getline(ss, label, ',');
-                vector<float> feature;
-                while(getline(ss, value, ',')){
-                    feature.push_back(stof(value));
-                }
-                features.push_back(feature);
-                if(label == "B") {
-                    ground_truth.push_back(0);
-                }
-                else {
-                    ground_truth.push_back(1);
-                }
-                datasetSize++;
-            }
-            assert(features.size() == ground_truth.size());
-            trainSize = datasetSize * train_test_split;
-            testSize = datasetSize - trainSize;
-            featureSize = features.front().size();
-        };
-
-        int getTrainData(unique_ptr<float[]> &X, unique_ptr<float[]> &y) {
-            X = make_unique<float[]>(trainSize*featureSize);
-            y = make_unique<float[]>(trainSize);
-            for (int i = 0; i < trainSize; i++){
-                vector<float> feature = features[i];
-                for(int j = 0; j < featureSize; j++){
-                    X[i*featureSize + j] = feature[j];
-                }
-                y[i] = ground_truth[i];
-            }
-            return trainSize;
-        };
-
-        int getTestData(unique_ptr<float[]> &X, unique_ptr<float[]> &y) {
-            X = make_unique<float[]>(testSize*featureSize);
-            y = make_unique<float[]>(testSize);
-            for (int i = 0; i < testSize; i++){
-                vector<float> feature = features[i];
-                for(int j = 0; j < featureSize; j++){
-                    X[i*featureSize + j] = feature[j];
-                }
-                y[i] = ground_truth[i];
-            }
-            return testSize;
-        };
-
-        int getFeatureSize(){
-            return featureSize;
-        };
-    
-        int getTotalSize(){
-            return datasetSize;
-        };
-
-    private:
-        float train_test_split = 0.8;
-        int trainSize = 0;
-        int testSize = 0;
-        int featureSize = 0;
-        size_t datasetSize = 0;
-        vector<vector<float>> features;
-        vector<float> ground_truth;
-};
-
 int main(int argc, char** argv){
     /*
     TODO:
     1. Add shuffle to dataset
     */
 
-   // Load dataset
-    BreastCancerDataset dataset;
-    int featSize = dataset.getFeatureSize();
-
-    // Load train set
+    HousePriceDataset dataset;
     unique_ptr<float[]> X_train;
     unique_ptr<float[]> y_train;
-    int trainSamples = dataset.getTrainData(X_train, y_train);
-    LogisticRegression LRModel{featSize, 0.001, 1000};
+    int trainSize = dataset.getTrainData(X_train, y_train);
 
-    // Model train
-    LRModel.fit(X_train, y_train, trainSamples);
+    int featureSize = 2;
+    LinearRegression model{featureSize, 0.01, 1000};
 
-    // Load test set for evaluation
-    unique_ptr<float[]> X_test;
-    unique_ptr<float[]> y_test;
-    int testSamples = dataset.getTestData(X_test, y_test);
-    unique_ptr<float[]> y_pred = LRModel.predict(X_test, testSamples);
+    model.fit(X_train, y_train, trainSize);
 
-    float accuracy = LRModel.accuracy(y_test, y_pred, testSamples);
-    LOG("Logistic Regression accuracy: " << setprecision(3) << accuracy << "%");
+    unique_ptr<float[]> X_test = make_unique<float[]>(featureSize);
+    X_test[0] = 4478;
+    X_test[1] = 5;
+    // dataset.preprocess(X_test, 1);
+    // LOG(X_test[0] << " " << X_test[1]);
+    auto y_test = model.predict(X_train, trainSize);
+
+    float score = model.score(y_train, y_test, trainSize);
+    LOG("Model score: " << score);
 
     return 0;
 }
