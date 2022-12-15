@@ -1,5 +1,5 @@
 # LogisticRegression-cpp
-Logistic Regression from scrach with Breast cancer dataset.
+Logistic Regression from scratch with Breast cancer dataset.
 ## How to run
 Logistic regression
 ```
