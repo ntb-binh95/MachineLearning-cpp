@@ -6,12 +6,13 @@
 #include <sstream>
 #include <vector>
 #include <iomanip>
-
-#include "gemm.h"
+#include <random>
+#include <algorithm>
+#include <unordered_map>
 
 using namespace std;
 
-#define LOG(x) cout << x << endl
+#define LOG(x) cout << x << endl;
 
 float rand_uniform(float min, float max) {
     if (max < min) {
@@ -22,50 +23,109 @@ float rand_uniform(float min, float max) {
     return ((float)rand()/RAND_MAX * (max - min)) + min;
 }
 
-class HousePriceDataset {
+class IrisDataset {
     public:
-        HousePriceDataset() {
-            string filePath = "house_price_data.txt";
+        IrisDataset() {
+            string filePath = "iris.data";
+
             ifstream file(filePath);
 
             if(!file.is_open()){
-                LOG("Cannot open dataset file");
+                LOG("Can not open dataset file");
             }
 
             string line = "";
             string value = "";
-            string price = "";
+            string label = "";
+            string currentLabel = "";
+            int labelValue = 0;
             while(getline(file, line)) {
-                stringstream ss{line};
+                stringstream ss(line);
                 vector<float> feature;
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < num_features; i++) {
                     getline(ss, value, ',');
                     feature.push_back(stof(value));
                 }
                 features.push_back(feature);
-                getline(ss, price, ',');
-                ground_truth.push_back(stof(price));
+                getline(ss, label, ',');
+                if(currentLabel == "") {
+                    currentLabel = label;
+                    labelValue = 0;
+                } else {
+                    // LOG(currentLabel << " " << label);
+                    if(currentLabel != label){
+                        labelValue++;
+                        currentLabel = label;
+                    }
+                }
+                ground_truth.push_back(labelValue);
                 datasetSize++;
             }
+
             assert(features.size() == ground_truth.size());
             trainSize = datasetSize * train_test_split;
             testSize = datasetSize - trainSize;
-            featureSize = features.back().size();
+            
+            shuffle_data();
         }
 
-        int getTrainData(unique_ptr<float[]> &X, unique_ptr<float[]> &y) {
-            X = make_unique<float[]>(trainSize*featureSize);
-            y = make_unique<float[]>(trainSize);
-            mean = make_unique<float[]>(featureSize);
-            std = make_unique<float[]>(featureSize);
+        int getTrainData(unique_ptr<float[]> &X, unique_ptr<int[]> &y){
+            X = make_unique<float[]>(trainSize*num_features);
+            y = make_unique<int[]>(trainSize);
+            for (int i = 0; i < trainSize; i++){
+                vector<float> feature = features[i];
+                for(int j = 0; j < num_features; j++){
+                    X[i*num_features + j] = feature[j];
+                }
+                y[i] = ground_truth[i];
+            }
+            return trainSize;
+        }
+
+        int getTestData(unique_ptr<float[]> &X, unique_ptr<int[]> &y) {
+            X = make_unique<float[]>(testSize*num_features);
+            y = make_unique<int[]>(testSize);
+            for (int i = 0; i < testSize; i++){
+                vector<float> feature = features[i];
+                for(int j = 0; j < num_features; j++){
+                    X[i*num_features + j] = feature[j];
+                }
+                y[i] = ground_truth[i];
+            }
+            return testSize;
+        };
+
+        int getFeatureSize() {
+            return num_features;
+        }
+    
+    private:
+        float train_test_split = 0.8;
+        int trainSize = 0;
+        int testSize = 0;
+        int num_features = 4;
+        size_t datasetSize = 0;
+        vector<vector<float>> features;
+        vector<int> ground_truth;
+        unique_ptr<float[]> mean;
+        unique_ptr<float[]> std;
+
+        void shuffle_data() {
+            shuffle(features.begin(), features.end(), std::default_random_engine(123));
+            shuffle(ground_truth.begin(), ground_truth.end(), std::default_random_engine(123));
+        }
+
+        void normalize_data(){
+            mean = make_unique<float[]>(num_features);
+            std = make_unique<float[]>(num_features);
             // mean 
             for (int i = 0; i < trainSize; i++) {
                 vector<float> feat = features[i];
-                for (int j = 0; j < featureSize; j++) {
+                for (int j = 0; j < num_features; j++) {
                     mean[j] += feat[j];
                 }
             }
-            for (int i = 0; i < featureSize; i++) {
+            for (int i = 0; i < num_features; i++) {
                 mean[i] /= trainSize;
                 // LOG("mean: " << mean[i]);
             }
@@ -73,205 +133,178 @@ class HousePriceDataset {
             // standard deviation
             for (int i = 0; i < trainSize; i++) {
                 vector<float> feat = features[i];
-                for (int j = 0; j < featureSize; j++) {
+                for (int j = 0; j < num_features; j++) {
                     std[j] += pow(feat[j] - mean[j], 2);
                 }
 
             }
 
-            for (int i = 0; i < featureSize; i++) {
+            for (int i = 0; i < num_features; i++) {
                 std[i] = sqrt(std[i] / trainSize);
                 // LOG("std: " << std[i]);
             }
 
             // normalize data
-            for (int i = 0; i < trainSize; i++) {
-                vector<float> feat = features[i];
-                for (int j = 0; j < featureSize; j++) {
-                    X[i*featureSize + j] = (feat[j] - mean[j]) / std[j];
-                    // LOG(X[i*featureSize + j]);
+            for (int i = 0; i < datasetSize; i++) {
+                for (int j = 0; j < num_features; j++) {
+                    features[i][j] = (features[i][j] - mean[j]) / std[j];
                 }
             }
-            for(int i =0; i < trainSize; i++) {
-                y[i] = ground_truth[i];
-                // LOG(y[i]);
-            }
-
-            return trainSize;
-        }
-
-        void preprocess(unique_ptr<float[]> &X, int samples){
-            for(int i = 0; i < samples; i++) {
-                for(int j = 0; j < featureSize; j++) {
-                    X[i*featureSize + j] = (X[i*featureSize + j] - mean[j]) / std[j];
-                }
-            }
-        }
-
-    private:
-        float train_test_split = 1.0f;
-        vector<vector<float>> features;
-        vector<float> ground_truth;
-        unique_ptr<float[]> mean;
-        unique_ptr<float[]> std;
-        int datasetSize = 0;
-        int trainSize = 0;
-        int testSize = 0;
-        int featureSize = 0;
+            // ground truth is in range [0-1]
+        };
 };
 
-class LinearRegression {
+void print(std::vector<int> const &v)
+{
+    for (int i: v) {
+        std::cout << i << ' ';
+    }
+};
+
+void test_shuffle(){
+    std::vector<int> v = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    std::shuffle(v.begin(), v.end(),std::default_random_engine(123));
+    print(v);
+    std::cout << std::endl;
+
+    std::vector<int> u = { 11, 12, 13, 14, 15, 16, 17, 18, 19 };
+    std::shuffle(u.begin(), u.end(),std::default_random_engine(123));
+    print(u);
+    std::cout << std::endl;
+
+    for(int i = 0; i< 9; i++){
+        assert(u[i] == (v[i] + 10));
+    }
+}
+
+class KNN {
     public:
-        LinearRegression(int input_feats): input_features{input_feats} {};
-        LinearRegression(int input_feats, float learning_rate, int n_iters): 
-        lr{learning_rate}, n_iters{n_iters}, input_features{input_feats} {};
-        
-        void fit(unique_ptr<float[]>& X, unique_ptr<float[]>& y, int samples) {
-            initParams();
-            for (int i = 0; i < n_iters; i++){
-                unique_ptr<float[]> y_pred = getPrediction(X, samples);
+        KNN(int input_feats, int K): input_features{input_feats}, K{K}{
 
-                computeGradient(X, y, y_pred, samples);
-                updateParams();
-            }
-        }
+        };
 
-        unique_ptr<float[]> predict(unique_ptr<float[]>& X, int samples){
-            auto predict = getPrediction(X, samples);
-            return predict;
-        }
+        void fit(unique_ptr<float[]> &X, unique_ptr<int[]> &y, int samples) {
+            this->X = X.get();
+            this->y = y.get();
+            num_samples = samples;
+        };
 
-        float score(unique_ptr<float[]> &y_gt, unique_ptr<float[]> &y_pred, int samples){
-            float y_mean = 0.f;
-            for(int i = 0; i < samples; i++){
-                y_mean += y_gt[i];
-            }
-            y_mean /= samples;
-                
-            float upper = 0.f;
-            float lower = 0.f;
-            for(int i = 0; i < samples; i++){
-                upper += pow(y_gt[i] - y_pred[i], 2);
-                lower += pow(y_gt[i] - y_mean, 2);
-            }
-            return 1 - upper/lower;
-        }
-
-    protected:
-        void initParams() {
-            weights = make_unique<float[]>(input_features);
-            // random initialize the weight
-            float scale = sqrt(2./input_features);
-            for (int i = 0; i < input_features; i++){
-                weights[i] = scale * rand_uniform(-1, 1);
-            }
-
-            dW = make_unique<float[]>(input_features);
-            bias = 0;
-            dB = 0;
-        }
-
-        unique_ptr<float[]> getPrediction(unique_ptr<float[]> &input, int samples) {
-            // output = input * weight + bias;
-            // input (samples x feats)   | a(m,k)
-            // weights (feats x 1)       | b(k,n)
-            // output (samples x 1)      | c(m,n)
-            unique_ptr<float[]> output = make_unique<float[]>(samples);
-            int m = samples;
-            int k = input_features;
-            int n = 1;
-            float * a = input.get();
-            float * b = weights.get();
-            float * c = output.get();
-            gemm(0, 0, m, n, k, 1, a, k, b, n, 0, c, n);
-
-            // add bias, sigmoid
+        unique_ptr<int[]> predict(unique_ptr<float[]> &input, int samples) {
+            unique_ptr<int[]> y_pred = make_unique<int[]>(samples);
             for(int i = 0; i < samples; i++) {
-                output[i] += bias;
+                float * row = input.get() + i * input_features;
+                y_pred[i] = getSinglePrediction(row);
             }
-
-            return output;
+            return y_pred;
         }
 
-        void computeGradient(unique_ptr<float[]> &X, unique_ptr<float[]> &y, unique_ptr<float[]> &y_pred, int samples){
-            // get distance between y and y_pred
-            unique_ptr<float[]> error = make_unique<float[]>(samples);
-            for(int i = 0; i < samples; i++){
-                error[i] = y_pred[i] - y[i];
-            }
+        float errorRate(unique_ptr<int[]> &y_gt, unique_ptr<int[]> &y_pred, int samples){
+            
+            return 100.f - accuracy(y_gt, y_pred, samples);
+        }
 
-            // compute dW and dB
-            // compute: dW = X.T * error
-            // X (samples x feats) -> a (k, m)
-            // error (samples x 1) -> b (k, n)
-            // dW (feats x 1)      -> c (m, n)
-            int m = input_features;
-            int k = samples;
-            int n = 1;
-            float * a = X.get();
-            float * b = error.get();
-            float * c = dW.get();
-            gemm(1, 0, m, n, k, 1, a, m, b, n, 0, c, n);
-
-            // for (int i = 0; i < input_features; i++){
-            //     LOG("DW " << X[i]);
-            // }
-            // compute dB = sum(error)
-            dB = 0;
+        float accuracy(unique_ptr<int[]> &y_gt, unique_ptr<int[]> &y_pred, int samples){
+            int true_count = 0;
             for (int i = 0; i < samples; i++) {
-                dB += error[i] / samples;
+                if(y_gt[i] == y_pred[i]){
+                    true_count++;
+                }
             }
-            // LOG(dB);
+            return true_count * 100.f / samples;
         }
 
-        void updateParams() {
-            // weights = -lr * dW
-            for (int i = 0; i < input_features; i++){
-                weights[i] -= lr * dW[i];
-            }
 
-            // bias = -lr * dB
-            bias -= lr * dB;
-        }
-    
     private:
-        float lr = 0.001;
-        int n_iters = 1000;
+        float * X;
+        int * y;
+        int num_samples = 0;
         int input_features = 0;
-        unique_ptr<float[]> weights;
-        unique_ptr<float[]> dW;
-        float bias = 0;
-        float dB = 0;
-        float sigmoid(float x){
-            return 1 / (1 + exp(-x));
+        int K = 0;
+
+        float getEuclideanDistance(float *x1, float *x2) {
+            float sum_square_dist = 0.f;
+            for(int i = 0; i < input_features; i++) {
+                // cout << x1[i] << " " << x2[i] << " ";
+                sum_square_dist += pow(x1[i] - x2[i], 2);
+            }
+            // cout << endl;
+            return sqrt(sum_square_dist);
+        }
+
+        int getSinglePrediction(float *X_row) {
+            unique_ptr<float[]> distances = make_unique<float[]>(num_samples);
+            for (int i = 0; i < num_samples; i++ ){
+                distances[i] = getEuclideanDistance(X_row, X + i*input_features);
+                // LOG(distances[i])
+            }
+
+            // sort with index
+            vector<pair<float, int>> distanceIndex;
+            for(int i = 0; i < num_samples; i++) {
+                distanceIndex.push_back(make_pair(distances[i], i));
+            }
+            sort(distanceIndex.begin(), distanceIndex.end());
+            // LOG("debug distance source: ");
+            // for (int i = 0; i < num_samples; i++ ){
+            //     LOG(distanceIndex[i].first << " " << distanceIndex[i].second);
+            // }
+            unordered_map<int, int> KMap;
+            for(int k = 0; k < K; k++) {
+                int value = y[distanceIndex[k].second];
+                if(KMap.find(value) == KMap.end()){
+                    KMap[value] = 1;
+                } else {
+                    KMap[value] += 1;
+                }
+            }
+            // LOG("debug KMap");
+            // for (auto item : KMap) {
+            //     LOG(item.first << " " << item.second);
+            // }
+
+            // return predict value
+            int predictValue = 0;
+            int KMaxCount = 0;
+            for (auto item : KMap) {
+                if(KMaxCount < item.second){
+                    KMaxCount = item.second;
+                    predictValue = item.first;
+                }
+            }
+
+            return predictValue;
         }
 };
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
     /*
     TODO:
-    1. Add shuffle to dataset
+    1. Load Iris dataset
     */
+//    test_shuffle();
 
-    HousePriceDataset dataset;
+    // Load dataset
+    IrisDataset dataset;
+
+    // Load train set
     unique_ptr<float[]> X_train;
-    unique_ptr<float[]> y_train;
-    int trainSize = dataset.getTrainData(X_train, y_train);
+    unique_ptr<int[]> y_train;
+    int trainSamples = dataset.getTrainData(X_train, y_train);
+    int featureSize = dataset.getFeatureSize();
 
-    int featureSize = 2;
-    LinearRegression model{featureSize, 0.01, 1000};
+    // Model train
+    int K = 3;
+    KNN model{featureSize, K};
+    model.fit(X_train, y_train, trainSamples);
 
-    model.fit(X_train, y_train, trainSize);
+    // model predict
+    unique_ptr<float[]> X_test;
+    unique_ptr<int[]> y_test;
+    int testSamples = dataset.getTestData(X_test, y_test);
+    unique_ptr<int[]> y_pred = model.predict(X_test, testSamples);
 
-    unique_ptr<float[]> X_test = make_unique<float[]>(featureSize);
-    X_test[0] = 4478;
-    X_test[1] = 5;
-    // dataset.preprocess(X_test, 1);
-    // LOG(X_test[0] << " " << X_test[1]);
-    auto y_test = model.predict(X_train, trainSize);
+    // Load test set for evaluation
+    float accuracy = model.accuracy(y_test, y_pred, testSamples);
 
-    float score = model.score(y_train, y_test, trainSize);
-    LOG("Model score: " << score);
-
-    return 0;
+    LOG("KNN accuracy: " << setprecision(3) << accuracy << "%");
 }

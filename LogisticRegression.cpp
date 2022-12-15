@@ -47,15 +47,20 @@ class LogisticRegression {
             }
             return ret;
         }
+        
+        float errorRate(unique_ptr<float[]> &y_gt, unique_ptr<float[]> &y_pred, int samples){
+            
+            return 100.f - accuracy(y_gt, y_pred, samples);
+        }
 
         float accuracy(unique_ptr<float[]> &y_gt, unique_ptr<float[]> &y_pred, int samples){
-            int error_count = 0;
+            int true_count = 0;
             for (int i = 0; i < samples; i++) {
-                if(y_gt[i] != y_pred[i]){
-                    error_count++;
+                if(y_gt[i] == y_pred[i]){
+                    true_count++;
                 }
             }
-            return error_count * 100.f / samples;
+            return true_count * 100.f / samples;
         }
 
     protected:
@@ -75,7 +80,7 @@ class LogisticRegression {
         unique_ptr<float[]> getPrediction(unique_ptr<float[]> &input, int samples) {
             // output = input * weight + bias;
             // input (samples x feats)   | a(m,k)
-            // weights (feats x 1)         | b(k,n)
+            // weights (feats x 1)       | b(k,n)
             // output (samples x 1)      | c(m,n)
             unique_ptr<float[]> output = make_unique<float[]>(samples);
             int m = samples;
@@ -305,7 +310,7 @@ int main(int argc, char** argv){
     unique_ptr<float[]> y_pred = LRModel.predict(X_test, testSamples);
 
     float accuracy = LRModel.accuracy(y_test, y_pred, testSamples);
-    LOG("Logistic Regression error rate: " << setprecision(3) << accuracy << "%");
+    LOG("Logistic Regression accuracy: " << setprecision(3) << accuracy << "%");
 
     return 0;
 }

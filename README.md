@@ -1,24 +1,32 @@
 # LogisticRegression-cpp
-Logistic Regression from scratch with Breast cancer dataset.
+Machine Learning algorithm from scratch with various dataset.
 ## How to run
 Logistic regression
 ```
-make logicR
-./logicR
+make logistic
+./logistic
 ```
 
-Test error rate: 1.75%
+Test Accuracy with Breast Cancer Dataset: 98.2%
 
 Linear Regression
+```
+make linear
+./linear
+```
+
+Score with House Price data: 0.732945
+
+K-Nearest Neighbor
 ```
 make main
 ./main
 ```
 
-Score: 0.732945
+Test Accuracy with Iris Dataset: 96.7%
 
 ## Reference
-[1] https://github.com/marvinlanhenke/DataScience/blob/main/MachineLearningFromScratch/LogisticRegression/LogisticRegression.py
+[1] https://github.com/marvinlanhenke/DataScience/blob/main/MachineLearningFromScratch/
 
 [2] https://github.com/pjreddie/darknet
 
