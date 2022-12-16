@@ -86,11 +86,11 @@ class IrisDataset {
             X = make_unique<float[]>(testSize*num_features);
             y = make_unique<int[]>(testSize);
             for (int i = 0; i < testSize; i++){
-                vector<float> feature = features[i];
+                vector<float> feature = features[trainSize + i];
                 for(int j = 0; j < num_features; j++){
                     X[i*num_features + j] = feature[j];
                 }
-                y[i] = ground_truth[i];
+                y[i] = ground_truth[trainSize + i];
             }
             return testSize;
         };

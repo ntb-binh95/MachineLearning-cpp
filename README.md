@@ -7,7 +7,7 @@ make logistic
 ./logistic
 ```
 
-Test Accuracy with Breast Cancer Dataset: 98.2%
+Test Accuracy with Breast Cancer Dataset: 96.5%
 
 Linear Regression
 ```
@@ -23,7 +23,7 @@ make main
 ./main
 ```
 
-Test Accuracy with Iris Dataset: 96.7%
+Test Accuracy with Iris Dataset: 100%
 
 ## Reference
 [1] https://github.com/marvinlanhenke/DataScience/blob/main/MachineLearningFromScratch/
