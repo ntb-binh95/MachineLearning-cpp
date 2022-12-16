@@ -23,109 +23,102 @@ float rand_uniform(float min, float max) {
     return ((float)rand()/RAND_MAX * (max - min)) + min;
 }
 
-class IrisDataset {
+class BreastCancerDataset {
     public:
-        IrisDataset() {
-            string filePath = "iris.data";
+        BreastCancerDataset() {
+            string filePath = "wdbc.data";
 
-            ifstream file(filePath);
+            ifstream file{filePath};
 
             if(!file.is_open()){
                 LOG("Can not open dataset file");
             }
 
             string line = "";
-            string value = "";
+            string ID = "";
             string label = "";
-            string currentLabel = "";
-            int labelValue = 0;
-            while(getline(file, line)) {
+            string value = "";
+            while(getline(file, line)){
                 stringstream ss(line);
+                getline(ss, ID, ',');
+                getline(ss, label, ',');
                 vector<float> feature;
-                for (int i = 0; i < num_features; i++) {
-                    getline(ss, value, ',');
+                while(getline(ss, value, ',')){
                     feature.push_back(stof(value));
                 }
                 features.push_back(feature);
-                getline(ss, label, ',');
-                if(currentLabel == "") {
-                    currentLabel = label;
-                    labelValue = 0;
-                } else {
-                    // LOG(currentLabel << " " << label);
-                    if(currentLabel != label){
-                        labelValue++;
-                        currentLabel = label;
-                    }
+                if(label == "B") {
+                    ground_truth.push_back(0);
                 }
-                ground_truth.push_back(labelValue);
+                else {
+                    ground_truth.push_back(1);
+                }
                 datasetSize++;
             }
-
             assert(features.size() == ground_truth.size());
             trainSize = datasetSize * train_test_split;
             testSize = datasetSize - trainSize;
-            
-            shuffle_data();
-        }
+            featureSize = features.front().size();
 
-        int getTrainData(unique_ptr<float[]> &X, unique_ptr<int[]> &y){
-            X = make_unique<float[]>(trainSize*num_features);
+            normalize_data();
+        };
+
+        int getTrainData(unique_ptr<float[]> &X, unique_ptr<int[]> &y) {
+            X = make_unique<float[]>(trainSize*featureSize);
             y = make_unique<int[]>(trainSize);
             for (int i = 0; i < trainSize; i++){
                 vector<float> feature = features[i];
-                for(int j = 0; j < num_features; j++){
-                    X[i*num_features + j] = feature[j];
+                for(int j = 0; j < featureSize; j++){
+                    X[i*featureSize + j] = feature[j];
                 }
                 y[i] = ground_truth[i];
             }
             return trainSize;
-        }
+        };
 
         int getTestData(unique_ptr<float[]> &X, unique_ptr<int[]> &y) {
-            X = make_unique<float[]>(testSize*num_features);
+            X = make_unique<float[]>(testSize*featureSize);
             y = make_unique<int[]>(testSize);
+            // LOG(trainSize << " " << testSize << " " << datasetSize);
             for (int i = 0; i < testSize; i++){
                 vector<float> feature = features[trainSize + i];
-                for(int j = 0; j < num_features; j++){
-                    X[i*num_features + j] = feature[j];
+                for(int j = 0; j < featureSize; j++){
+                    X[i*featureSize + j] = feature[j];
                 }
                 y[i] = ground_truth[trainSize + i];
             }
             return testSize;
         };
 
-        int getFeatureSize() {
-            return num_features;
-        }
+        int getFeatureSize(){
+            return featureSize;
+        };
     
+        int getTotalSize(){
+            return datasetSize;
+        };
+
     private:
         float train_test_split = 0.8;
         int trainSize = 0;
         int testSize = 0;
-        int num_features = 4;
+        int featureSize = 0;
         size_t datasetSize = 0;
         vector<vector<float>> features;
         vector<int> ground_truth;
         unique_ptr<float[]> mean;
         unique_ptr<float[]> std;
-
-        void shuffle_data() {
-            shuffle(features.begin(), features.end(), std::default_random_engine(123));
-            shuffle(ground_truth.begin(), ground_truth.end(), std::default_random_engine(123));
-        }
-
         void normalize_data(){
-            mean = make_unique<float[]>(num_features);
-            std = make_unique<float[]>(num_features);
+            mean = make_unique<float[]>(featureSize);
+            std = make_unique<float[]>(featureSize);
             // mean 
             for (int i = 0; i < trainSize; i++) {
                 vector<float> feat = features[i];
-                for (int j = 0; j < num_features; j++) {
+                for (int j = 0; j < featureSize; j++) {
                     mean[j] += feat[j];
                 }
             }
-            for (int i = 0; i < num_features; i++) {
+            for (int i = 0; i < featureSize; i++) {
                 mean[i] /= trainSize;
                 // LOG("mean: " << mean[i]);
             }
@@ -133,20 +126,20 @@ class IrisDataset {
             // standard deviation
             for (int i = 0; i < trainSize; i++) {
                 vector<float> feat = features[i];
-                for (int j = 0; j < num_features; j++) {
+                for (int j = 0; j < featureSize; j++) {
                     std[j] += pow(feat[j] - mean[j], 2);
                 }
 
             }
 
-            for (int i = 0; i < num_features; i++) {
+            for (int i = 0; i < featureSize; i++) {
                 std[i] = sqrt(std[i] / trainSize);
                 // LOG("std: " << std[i]);
             }
 
             // normalize data
             for (int i = 0; i < datasetSize; i++) {
-                for (int j = 0; j < num_features; j++) {
+                for (int j = 0; j < featureSize; j++) {
                     features[i][j] = (features[i][j] - mean[j]) / std[j];
                 }
             }
@@ -154,52 +147,29 @@ class IrisDataset {
         };
 };
 
-void print(std::vector<int> const &v)
-{
-    for (int i: v) {
-        std::cout << i << ' ';
-    }
-};
-
-void test_shuffle(){
-    std::vector<int> v = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    std::shuffle(v.begin(), v.end(),std::default_random_engine(123));
-    print(v);
-    std::cout << std::endl;
-
-    std::vector<int> u = { 11, 12, 13, 14, 15, 16, 17, 18, 19 };
-    std::shuffle(u.begin(), u.end(),std::default_random_engine(123));
-    print(u);
-    std::cout << std::endl;
-
-    for(int i = 0; i< 9; i++){
-        assert(u[i] == (v[i] + 10));
-    }
-}
-
-class KNN {
+class SVM {
     public:
-        KNN(int input_feats, int K): input_features{input_feats}, K{K}{
+        SVM(int input_feats): input_features{input_feats}{};
 
-        };
+        SVM(int input_feats, float learning_rate, int n_iters, float lambda)
+        : input_features{input_feats}, lr{learning_rate}, n_iters{n_iters}, lambda{lambda} {};
 
         void fit(unique_ptr<float[]> &X, unique_ptr<int[]> &y, int samples) {
-            this->X = X.get();
-            this->y = y.get();
-            num_samples = samples;
+            initParams();
+            unique_ptr<int[]> convertedY = convert_label(y, samples); // convert y from [0,1] to [-1,1]
+            for (int i = 0; i < n_iters; i++){
+                for(int j = 0; j < samples; j++) {
+                    
+                }
+            }
         };
 
         unique_ptr<int[]> predict(unique_ptr<float[]> &input, int samples) {
             unique_ptr<int[]> y_pred = make_unique<int[]>(samples);
-            for(int i = 0; i < samples; i++) {
-                float * row = input.get() + i * input_features;
-                y_pred[i] = getSinglePrediction(row);
-            }
             return y_pred;
         }
 
         float errorRate(unique_ptr<int[]> &y_gt, unique_ptr<int[]> &y_pred, int samples){
-            
             return 100.f - accuracy(y_gt, y_pred, samples);
         }
 
@@ -213,78 +183,50 @@ class KNN {
             return true_count * 100.f / samples;
         }
 
-
-    private:
-        float * X;
-        int * y;
-        int num_samples = 0;
-        int input_features = 0;
-        int K = 0;
-
-        float getEuclideanDistance(float *x1, float *x2) {
-            float sum_square_dist = 0.f;
-            for(int i = 0; i < input_features; i++) {
-                // cout << x1[i] << " " << x2[i] << " ";
-                sum_square_dist += pow(x1[i] - x2[i], 2);
+    protected:
+        void initParams() {
+            weights = make_unique<float[]>(input_features);
+            // random initialize the weight
+            float scale = sqrt(2./input_features);
+            for (int i = 0; i < input_features; i++){
+                weights[i] = scale * rand_uniform(-1, 1);
             }
-            // cout << endl;
-            return sqrt(sum_square_dist);
+
+            dW = make_unique<float[]>(input_features);
+            bias = 0;
+            dB = 0;
         }
 
-        int getSinglePrediction(float *X_row) {
-            unique_ptr<float[]> distances = make_unique<float[]>(num_samples);
-            for (int i = 0; i < num_samples; i++ ){
-                distances[i] = getEuclideanDistance(X_row, X + i*input_features);
-                // LOG(distances[i])
-            }
+    private:
+        unique_ptr<float[]> weights;
+        unique_ptr<float[]> dW;
+        float bias = 0;
+        float dB = 0;
+        float lr = 0.001;
+        int n_iters = 1000;
+        float lambda = 0.01;
+        int input_features = 0;
 
-            // sort with index
-            vector<pair<float, int>> distanceIndex;
-            for(int i = 0; i < num_samples; i++) {
-                distanceIndex.push_back(make_pair(distances[i], i));
-            }
-            sort(distanceIndex.begin(), distanceIndex.end());
-            // LOG("debug distance source: ");
-            // for (int i = 0; i < num_samples; i++ ){
-            //     LOG(distanceIndex[i].first << " " << distanceIndex[i].second);
-            // }
-            unordered_map<int, int> KMap;
-            for(int k = 0; k < K; k++) {
-                int value = y[distanceIndex[k].second];
-                if(KMap.find(value) == KMap.end()){
-                    KMap[value] = 1;
+        unique_ptr<int[]> convert_label(unique_ptr<int[]> &y, int samples) {
+            auto converted = make_unique<int[]>(samples);
+            for (int i = 0; i < samples; i++) {
+                if(y[i] == 0) {
+                    converted[i] = -1;
                 } else {
-                    KMap[value] += 1;
+                    converted[i] = y[i];
                 }
             }
-            // LOG("debug KMap");
-            // for (auto item : KMap) {
-            //     LOG(item.first << " " << item.second);
-            // }
-
-            // return predict value
-            int predictValue = 0;
-            int KMaxCount = 0;
-            for (auto item : KMap) {
-                if(KMaxCount < item.second){
-                    KMaxCount = item.second;
-                    predictValue = item.first;
-                }
-            }
-
-            return predictValue;
+            return converted;
         }
 };
 
 int main(int argc, char** argv) {
     /*
     TODO:
-    1. Load Iris dataset
     */
-//    test_shuffle();
 
     // Load dataset
-    IrisDataset dataset;
+    BreastCancerDataset dataset;
 
     // Load train set
     unique_ptr<float[]> X_train;
@@ -293,8 +235,7 @@ int main(int argc, char** argv) {
     int featureSize = dataset.getFeatureSize();
 
     // Model train
-    int K = 3;
-    KNN model{featureSize, K};
+    SVM model{featureSize};
     model.fit(X_train, y_train, trainSamples);
 
     // model predict

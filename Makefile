@@ -7,5 +7,8 @@ logistic: LogisticRegression.cpp gemm.cpp
 linear: LinearRegression.cpp gemm.cpp
 	g++ -o linear LinearRegression.cpp gemm.cpp
 
+knn: KNN.cpp
+	g++ -o knn KNN.cpp
+
 clean:
-	rm main linear logistic
+	rm -f main linear logistic
