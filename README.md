@@ -1,7 +1,7 @@
 # LogisticRegression-cpp
 Machine Learning algorithm from scratch with various dataset.
 ## How to run
-Logistic regression
+1. Logistic regression
 ```
 make logistic
 ./logistic
@@ -9,7 +9,7 @@ make logistic
 
 Test Accuracy with Breast Cancer Dataset: 96.5%
 
-Linear Regression
+2. Linear Regression
 ```
 make linear
 ./linear
@@ -17,7 +17,7 @@ make linear
 
 Score with House Price data: 0.732945
 
-K-Nearest Neighbor
+3. K-Nearest Neighbor
 ```
 make main
 ./main
