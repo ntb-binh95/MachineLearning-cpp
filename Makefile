@@ -10,5 +10,8 @@ linear: LinearRegression.cpp gemm.cpp
 knn: KNN.cpp
 	g++ -o knn KNN.cpp
 
+svm: SVM.cpp
+	g++ -o svm SVM.cpp
+
 clean:
-	rm -f main linear logistic
+	rm -f main linear logistic knn svm

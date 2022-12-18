@@ -1,7 +1,7 @@
 # LogisticRegression-cpp
 Machine Learning algorithm from scratch with various dataset.
 ## How to run
-1. Logistic regression
+1. Logistic regression (RMSE loss)
 ```
 make logistic
 ./logistic
@@ -19,11 +19,20 @@ Score with House Price data: 0.732945
 
 3. K-Nearest Neighbor
 ```
-make main
-./main
+make knn
+./knn
 ```
 
 Test Accuracy with Iris Dataset: 100%
+
+
+4. Support Vector Machine (classifier)
+```
+make svm
+./svm
+```
+
+Test Accuracy with Breast Cancer Dataset: 95.6%
 
 ## Reference
 [1] https://github.com/marvinlanhenke/DataScience/blob/main/MachineLearningFromScratch/

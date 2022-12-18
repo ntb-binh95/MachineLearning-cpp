@@ -79,6 +79,7 @@ class BreastCancerDataset {
         int getTestData(unique_ptr<float[]> &X, unique_ptr<int[]> &y) {
             X = make_unique<float[]>(testSize*featureSize);
             y = make_unique<int[]>(testSize);
+            // LOG(trainSize << " " << testSize << " " << datasetSize);
             for (int i = 0; i < testSize; i++){
                 vector<float> feature = features[trainSize + i];
                 for(int j = 0; j < featureSize; j++){
