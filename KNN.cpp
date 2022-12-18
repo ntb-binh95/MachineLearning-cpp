@@ -66,6 +66,7 @@ class IrisDataset {
             trainSize = datasetSize * train_test_split;
             testSize = datasetSize - trainSize;
             
+            normalize_data();
             shuffle_data();
         }
 

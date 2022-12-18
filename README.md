@@ -1,5 +1,5 @@
 # LogisticRegression-cpp
-Machine Learning algorithm from scratch with various dataset.
+Machine Learning algorithm from scratch with various dataset - CPP copy version from this [repo](https://github.com/marvinlanhenke/DataScience/tree/main/MachineLearningFromScratch).
 ## How to run
 1. Logistic regression (RMSE loss)
 ```
@@ -33,6 +33,14 @@ make svm
 ```
 
 Test Accuracy with Breast Cancer Dataset: 95.6%
+
+5. Naive Bayes
+```
+make naive
+./naive
+```
+
+Test Accuracy with Iris Dataset: 100%
 
 ## Reference
 [1] https://github.com/marvinlanhenke/DataScience/blob/main/MachineLearningFromScratch/

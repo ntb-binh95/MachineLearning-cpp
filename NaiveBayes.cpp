@@ -248,8 +248,6 @@ class NaiveBayes {
         unique_ptr<float[]> mean; 
         unique_ptr<float[]> variance;
         unique_ptr<float[]> priors;
-        float lr = 0.001;
-        int n_iters = 1000;
         int input_features = 0;
         int n_classes = 0;
 

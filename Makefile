@@ -13,5 +13,8 @@ knn: KNN.cpp
 svm: SVM.cpp
 	g++ -o svm SVM.cpp
 
+naive: NaiveBayes.cpp
+	g++ -o naive NaiveBayes.cpp
+
 clean:
-	rm -f main linear logistic knn svm
+	rm -f main linear logistic knn svm naive
