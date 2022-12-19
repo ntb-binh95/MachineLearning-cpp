@@ -25,7 +25,7 @@ float rand_uniform(float min, float max) {
 class HousePriceDataset {
     public:
         HousePriceDataset() {
-            string filePath = "house_price_data.txt";
+            string filePath = "data/house_price_data.txt";
             ifstream file(filePath);
 
             if(!file.is_open()){

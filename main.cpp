@@ -26,7 +26,7 @@ float rand_uniform(float min, float max) {
 class IrisDataset {
     public:
         IrisDataset() {
-            string filePath = "iris.data";
+            string filePath = "data/iris.data";
 
             ifstream file(filePath);
 

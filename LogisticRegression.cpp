@@ -164,7 +164,7 @@ class LogisticRegression {
 class BreastCancerDataset {
     public:
         BreastCancerDataset() {
-            string filePath = "wdbc.data";
+            string filePath = "data/wdbc.data";
 
             ifstream file{filePath};
 

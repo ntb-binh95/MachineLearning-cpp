@@ -26,7 +26,7 @@ float rand_uniform(float min, float max) {
 class BreastCancerDataset {
     public:
         BreastCancerDataset() {
-            string filePath = "wdbc.data";
+            string filePath = "data/wdbc.data";
 
             ifstream file{filePath};
 
