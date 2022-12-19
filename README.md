@@ -1,4 +1,4 @@
-# LogisticRegression-cpp
+# MachineLearning-cpp
 Machine Learning algorithm from scratch with various dataset - CPP copy version from this [repo](https://github.com/marvinlanhenke/DataScience/tree/main/MachineLearningFromScratch).
 ## How to run
 1. Logistic regression (RMSE loss)
